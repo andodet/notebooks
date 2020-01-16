@@ -553,3 +553,5 @@ ldn_anim <- ggmap(maps$London) +
 
 animate(ldn_anim, renderer = gifski_renderer("ldn_2018.gif"))
 ```
+
+![](location-history_files/figure-gfm/ldn_2018.gif)<!-- -->
