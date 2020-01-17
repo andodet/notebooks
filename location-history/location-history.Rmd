@@ -38,7 +38,7 @@ library(raster)  # to calc distances between latlon
 `~/.zshrc` for a one-off analysis.  
 **For the love of god, remember to add that file to `.gitignore` to avoid accidentally pushing it to Github.**
 
-```{r}
+```{r api_token}
 # Set gMaps api key
 register_google(key = read.dcf(
   ".env",
@@ -93,7 +93,7 @@ glimpse(data)
 
 ## How big is the dataset?
 
-```{r}
+```{r data_size}
 min(data$timestampMs)
 max(data$timestampMs)
 
@@ -109,7 +109,7 @@ For some reason the number of data points collected falls sharply during summer 
 Denmark and the UK). During that time I was job-hunting and have moved aronud less frequently, it would be interesting to understand if a less dynamic 
 lifestyle is negatively correlated to the number of data points collected.
 
-```{r}
+```{r time_dist}
 # Get points collected over time
 dp_trend <- data %>% 
   group_by(year_month = as.Date(format(timestampMs, "%Y-%m-01"))) %>%
@@ -128,7 +128,7 @@ dp_yearly <- data.frame(table(
 dp <- rbind(dp_daily[,-1], dp_monthly[,-1], dp_yearly[,-1])
 ```
 
-```{r, fig.height=5, fig.width=9, fig.align="center"}
+```{r time_dist_plots, fig.height=5, fig.width=9, fig.align="center"}
 # Data points collected over time
 trend <- ggplot(dp_trend, aes(year_month, obs)) +
   geom_bar(stat = "identity", fill = "tomato") +
@@ -208,7 +208,7 @@ grid.arrange(acc_dist, acc_trend, ncol = 1)
 Over the past 7 years I had the lucky opportunity to study and work in 3 European cities (Milan, Copenhagen and London). Using [`ggmap`](https://github.com/dkahle/ggmap)
 we can easily plot location data on maps using the good old `ggplot` syntax.
 
-```{r message=FALSE, warning=FALSE, fig.height=15, fig.width=12, cache=TRUE}
+```{r map_plots, message=FALSE, warning=FALSE, fig.height=15, fig.width=12, cache=TRUE}
 # Retrieve maps from Google Maps api
 maps <- list(
   Europe     = get_map("Europe", zoom = 4),
@@ -238,7 +238,7 @@ grid.draw(plot_grid)
 For the sake of curiosity we can also check for any pattern in data accurcacy within a specific city. The same could be done with `velocity` to inspect
 if there's any area that registered faster movements (morning commute, motorbike trips, etc.).
 
-```{r warning=FALSE, message=FALSE}
+```{r ldn_acc, warning=FALSE, message=FALSE}
 # Plot accuracy in London
 ldn_acc <- ggmap(maps$London) +
   stat_summary_2d(geom = "tile", bins = 100, data = data, aes(longitudeGPS,
@@ -286,7 +286,7 @@ Geocoding cities ourselves will involve performing the following steps:
 2. Finding out which the closest airport is
 3. Grabbing the city label from the airport dataset.
 
-```{r message=FALSE, warning=FALSE}
+```{r manual_geocode, message=FALSE, warning=FALSE}
 # Filter relevant airports
 airport_coords <- airport_coords %>% 
   filter(V2 %in% c("FCO", "MXP", "LCY", "CPH"))
@@ -392,7 +392,7 @@ located in the `activity` column. I will only look at **2018** as unnesting larg
 Surprisingly enough, it looks like I've spent most of my time _activity_, without knowing how this predictions are produced it's hard to tell whether or not it 
 is accurate.
 
-```{r activities, warning=FALSE, message=FALSE}
+```{r activities, warning=FALSE, message=FALSE, cache=TRUE}
 activities <- bind_rows(data$activity)  # Get df of activities
 
 # Format timestmaps
@@ -422,7 +422,7 @@ ggplot(activities_rank, aes(reorder(type, -n), n, fill = type)) +
 The data spans across several years, with London being the city where I've generated data for the longest period of time.
 Through [`gganimate`](https://github.com/thomasp85/gganimate) we can visualise the evolution of the recorded locations on a map.
 
-```{r, eval=FALSE}
+```{r ldn_gif, eval=FALSE}
 library(gganimate)
 
 ldn_2018 <- data %>% 
@@ -442,9 +442,4 @@ ldn_anim <- ggmap(maps$London) +
 
 animate(ldn_anim, renderer = gifski_renderer("ldn_2018.gif"))
 ```
-
-
-
-
-
 
