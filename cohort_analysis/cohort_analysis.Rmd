@@ -1,0 +1,193 @@
+---
+title: "Cohort Analysis"
+output: 
+  md_document:
+    variant: gfm
+---
+
+```{r echo=FALSE}
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(lubridate)
+```
+
+Data can be downloaded from [here](https://www.kaggle.com/gspmoreira/articles-sharing-reading-from-cit-deskdrop)
+
+```{r}
+df <- read.csv("~/code/notebooks/article-rc/data/users_interactions.csv")
+df$date <- as.Date(as.POSIXct(df$timestamp, origin = "1970-01-01"))
+```
+
+
+```{r}
+coh <- data.frame(q = quarter(df$date, with_year = TRUE),
+                  user = df$personId,
+                  event = df$eventType)
+
+glimpse(coh)
+```
+
+```{r}
+coh <- coh %>% 
+  group_by(user) %>% 
+  mutate(first = min(q)) %>% 
+  group_by(first, q) %>% 
+  summarise(users = n_distinct(user)) %>% 
+  spread(q, users)
+
+coh
+```
+
+```{r}
+shiftrow <- function(v) {
+  first_na_index <- min(which(!is.na(v)))
+  
+  c(v[first_na_index:length(v)], rep(NA, first_na_index - 1))
+}
+
+shifted <- data.frame(
+  cohort = coh$first,
+  t(apply(select(as.data.frame(coh), 2:ncol(coh)), 1, shiftrow))
+)
+
+colnames(shifted) <- c("cohort", sub("", "quarter.",
+                                     str_pad(1:(ncol(shifted) - 1), 2, pad = "0")))
+
+shifted
+```
+
+```{r}
+shifted_pct <- data.frame(
+  cohort = shifted$cohort,
+  shifted[,2:nrow(shifted)] / shifted[["quarter.01"]]
+)
+
+shifted_pct
+```
+
+
+```{r}
+p_data_abs <- gather(shifted, "cohort_age", "people", 2:ncol(shifted))
+p_data_pct <- gather(shifted_pct, "cohort_age", "percent", 2:ncol(shifted_pct))
+
+labelnames <- c(p_data_abs$people[1:(ncol(shifted)-1)],
+                p_data_pct$percent[(ncol(shifted)):(nrow(p_data_pct))])
+
+pretty_print <- function(n) {
+  label <- case_when(n <= 1 ~ sprintf("%1.0f %%", n*100),
+                     n > 1 ~ as.character(n),
+                     TRUE ~ " ")
+  
+  label
+}
+```
+
+```{r}
+p_data <- data.frame(
+  cohort = p_data_pct$cohort,
+  cohort_age = p_data_pct$cohort_age,
+  percentage = p_data_pct$percent,
+  label = pretty_print(labelnames)
+)
+```
+
+```{r}
+ggplot(p_data, aes(x = cohort_age, y = reorder(cohort, desc(cohort)))) +
+  geom_raster(aes(fill = percentage)) +
+  scale_fill_continuous(guide = FALSE) +
+  geom_text(aes(label = label), color = "white") +
+  labs(x = "cohort_age", y = "cohort",
+       title = "Retention table",
+       subtitle = "Quarterly breakdown")
+```
+
+## Monthly breakdown
+
+```{r}
+coh <- data.frame(month = format.Date(df$date, "%Y-%m"),
+                  user = df$personId,
+                  event = df$eventType,
+                  stringsAsFactors = FALSE)
+
+glimpse(coh)
+```
+
+```{r}
+coh <- coh %>% 
+  group_by(user) %>% 
+  mutate(first = min(month)) %>% 
+  group_by(first, month) %>% 
+  summarise(users = n_distinct(user)) %>% 
+  spread(month, users)
+
+coh
+```
+
+```{r}
+shifted <- data.frame(
+  cohort = coh$first,
+  t(apply(select(as.data.frame(coh), 2:ncol(coh)), 1, shiftrow))
+)
+
+colnames(shifted) <- c("cohort", sub("", "month.",
+                                     str_pad(1:(ncol(shifted) - 1), 2, pad = "0")))
+
+shifted
+```
+
+```{r}
+shifted_pct <- data.frame(
+  cohort = shifted$cohort,
+  shifted[,2:nrow(shifted)] / shifted[["month.01"]]
+)
+
+shifted_pct
+```
+
+```{r}
+p_data_abs <- gather(shifted, "cohort_age", "people", 2:ncol(shifted))
+p_data_pct <- gather(shifted_pct, "cohort_age", "percent", 2:ncol(shifted_pct))
+
+labelnames <- c(p_data_abs$people[1:(ncol(shifted)-1)],
+                p_data_pct$percent[(ncol(shifted)):(nrow(p_data_pct))])
+
+pretty_print <- function(n) {
+  label <- case_when(n <= 1 ~ sprintf("%1.0f %%", n*100),
+                     n > 1 ~ as.character(n),
+                     TRUE ~ " ")
+  
+  label
+}
+```
+
+```{r}
+p_data <- data.frame(
+  cohort = p_data_pct$cohort,
+  cohort_age = p_data_pct$cohort_age,
+  percentage = p_data_pct$percent,
+  label = pretty_print(labelnames)
+)
+```
+
+```{r}
+ggplot(p_data, aes(x = cohort_age, y = reorder(cohort, desc(cohort)))) +
+  geom_raster(aes(fill = percentage)) +
+  scale_fill_continuous(guide = FALSE) +
+  geom_text(aes(label = label), color = "white") +
+  labs(x = "cohort_age", y = "cohort",
+       title = "Retention Table",
+       subtitle = "Monthly breakdown")
+```
+
+From the plot above, it is clear that the retailer has issues on 2 areas:  
+
+* Acquisition (cohort size worsening over time)
+* Retention (same as above for first month retention)
+
+It would be interesting to understand (might be added later) which `eventType` has
+suffered the most over time to figure where marketing effort should be focused.
+
+
+
