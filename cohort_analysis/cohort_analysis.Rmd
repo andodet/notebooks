@@ -5,7 +5,7 @@ output:
     variant: gfm
 ---
 
-```{r echo=FALSE}
+```{r echo=TRUE, message=FALSE}
 library(tidyr)
 library(dplyr)
 library(stringr)

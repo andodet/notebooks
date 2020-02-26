@@ -1,20 +1,10 @@
-    ## 
-    ## Attaching package: 'dplyr'
-
-    ## The following objects are masked from 'package:stats':
-    ## 
-    ##     filter, lag
-
-    ## The following objects are masked from 'package:base':
-    ## 
-    ##     intersect, setdiff, setequal, union
-
-    ## 
-    ## Attaching package: 'lubridate'
-
-    ## The following object is masked from 'package:base':
-    ## 
-    ##     date
+``` r
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(lubridate)
+```
 
 Data can be downloaded from
 [here](https://www.kaggle.com/gspmoreira/articles-sharing-reading-from-cit-deskdrop)
